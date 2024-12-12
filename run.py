@@ -3,8 +3,10 @@ import numpy as np
 import cairosvg
 import svgwrite
 from scipy.interpolate import splprep, splev
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
-def svg_to_image(svg_path, output_image_path, scale=4):
+def svg_to_image(svg_path, output_image_path, scale=2):
     """
     Converts an SVG file to a PNG file with increased resolution.
     """
@@ -34,31 +36,35 @@ def process_image_with_opencv(image):
     mask = np.all(red_image == [0, 0, 255], axis=-1)
     return red_image, mask
 
-def smooth_contour(contour, k=3, s=0):
+def simplify_polygon(polygon, tolerance=1.0):
     """
-    Smooth the contour using spline interpolation.
+    Simplify a polygon using Shapely's simplify method.
     """
-    x, y = contour.T
-    # Convert from numpy arrays to lists
-    x = x.tolist()[0]
-    y = y.tolist()[0]
+    poly = Polygon(polygon)
+    simplified = poly.simplify(tolerance, preserve_topology=True)
+    return np.array(simplified.exterior.coords).astype(int)
 
-    # Append the starting point to the end of the list of points
-    x.append(x[0])
-    y.append(y[0])
-
-    # Fit splines to x=f(u) and y=g(u), treating both as periodic. Also note that s=0
-    # is needed in order to force the spline fit to pass through all the input points.
-    tck, u = splprep([x, y], u=None, s=s, per=True)
-
-    # Evaluate the spline fits for 1000 evenly spaced distance values
-    xi, yi = splev(np.linspace(0, 1, 1000), tck)
+def fit_bezier(points, num_control_points=4):
+    """
+    Fit a Bezier curve to a set of points.
+    """
+    x, y = points.T
+    t = np.linspace(0, 1, len(x))
     
-    return np.column_stack((xi, yi)).astype(int)
+    # Fit x(t) and y(t) cubic Bezier curves
+    cx = np.polyfit(t, x, num_control_points - 1)
+    cy = np.polyfit(t, y, num_control_points - 1)
+    
+    # Generate Bezier curve points
+    t_new = np.linspace(0, 1, 100)
+    x_bezier = np.polyval(cx, t_new)
+    y_bezier = np.polyval(cy, t_new)
+    
+    return np.column_stack((x_bezier, y_bezier)).astype(int)
 
 def image_to_svg_with_red(image, mask, output_svg_path, original_width, original_height):
     """
-    Converts the processed image back to SVG by extracting and smoothing contours.
+    Converts the processed image back to SVG by extracting, simplifying, and smoothing contours.
     """
     contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
@@ -66,13 +72,27 @@ def image_to_svg_with_red(image, mask, output_svg_path, original_width, original
     
     scale_factor = original_width / image.shape[1]
     
-    for contour in contours:
-        if cv2.contourArea(contour) > 100:  # Filter out small contours
-            smooth_cont = smooth_contour(contour)
-            scaled_cont = (smooth_cont * scale_factor).astype(int)
-            path_data = 'M ' + ' '.join([f"{point[0]},{point[1]}" for point in scaled_cont])
-            path = dwg.path(d=path_data, fill='red', stroke='none')
-            dwg.add(path)
+    # Merge overlapping contours
+    polygons = [Polygon(cont.reshape(-1, 2)) for cont in contours if cv2.contourArea(cont) > 50]
+    merged = unary_union(polygons)
+    
+    if isinstance(merged, Polygon):
+        merged = [merged]
+    
+    for poly in merged:
+        contour = np.array(poly.exterior.coords).astype(int)
+        simplified = simplify_polygon(contour, tolerance=1.0)
+        smooth_cont = fit_bezier(simplified)
+        scaled_cont = (smooth_cont * scale_factor).astype(int)
+        
+        # Convert to SVG path
+        path_data = f"M {scaled_cont[0][0]},{scaled_cont[0][1]}"
+        for i in range(1, len(scaled_cont), 3):
+            if i + 2 < len(scaled_cont):
+                path_data += f" C {scaled_cont[i][0]},{scaled_cont[i][1]} {scaled_cont[i+1][0]},{scaled_cont[i+1][1]} {scaled_cont[i+2][0]},{scaled_cont[i+2][1]}"
+        
+        path = dwg.path(d=path_data, fill='red', stroke='none')
+        dwg.add(path)
     
     dwg.save()
 
