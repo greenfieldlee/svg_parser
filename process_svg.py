@@ -93,7 +93,7 @@ def image_to_svg_path(image, mask):
     """
     try:
         contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        # smoothed_contours = smooth_contours(contours, epsilon=2)
+        smoothed_contours = smooth_contours(contours, epsilon=2)
 
         # Adjust path coordinates to account for the image growth
         path_data = []

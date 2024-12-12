@@ -2,11 +2,26 @@ import os
 import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import uuid
 from process_svg import process_svg
 
 app = FastAPI()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Setup CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -35,7 +50,7 @@ async def process_svg_endpoint(file: UploadFile = File(...), grow: float = Form(
         
         logger.info(f"Generated SVG path data with grow={grow}")
         
-        return JSONResponse(content={"svg_path": svg_path_data})
+        return JSONResponse(content={"svg_path": svg_path_data[1]})
     
     except Exception as e:
         logger.error(f"Error processing SVG: {str(e)}")
