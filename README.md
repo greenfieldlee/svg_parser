@@ -33,3 +33,4 @@
    ```
 
 ## Configuration
+   pm2 start main.py --name "fastapi-app" --interpreter /usr/bin/python3
