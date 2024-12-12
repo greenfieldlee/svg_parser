@@ -31,6 +31,13 @@ logger = logging.getLogger(__name__)
 os.makedirs("temp_uploads", exist_ok=True)
 os.makedirs("temp_outputs", exist_ok=True)
 
+@app.get("/process-svg/")
+async def process_svg_info():
+    return JSONResponse(content={
+        "message": "This endpoint processes SVG files.",
+        "usage": "Send a POST request to this endpoint with 'file' (SVG file) and 'grow' (float) in the form data."
+    })
+
 @app.post("/process-svg/")
 async def process_svg_endpoint(file: UploadFile = File(...), grow: float = Form(0.0)):
     # Generate unique filenames
