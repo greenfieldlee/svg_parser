@@ -35,18 +35,9 @@ def process_image_with_opencv(image):
 
 def smooth_contours(contours, epsilon=2):
     """
-    Smooths the contours using polygon approximation, but avoids simplifying circles too much.
+    Smooths the contours using polygon approximation.
     """
-    smoothed_contours = []
-    for contour in contours:
-        # Apply approximation, but keep it less aggressive for circular shapes
-        smoothed = cv2.approxPolyDP(contour, epsilon, True)
-        
-        # If the contour is very circular, avoid simplifying it too much
-        if len(smoothed) > 8:  # Likely circular
-            smoothed_contours.append(smoothed)
-        else:
-            smoothed_contours.append(contour)  # Keep it as is if it’s already circular or smooth
+    smoothed_contours = [cv2.approxPolyDP(contour, epsilon, True) for contour in contours]
     return smoothed_contours
 
 
