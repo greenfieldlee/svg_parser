@@ -69,22 +69,39 @@ def process_image_with_opencv(image):
         logger.error(f"Error processing image with OpenCV: {str(e)}")
         raise
 
-def smooth_contours(contours, epsilon=2):
+import scipy.interpolate as si
+
+def smooth_contours_with_bspline(contours, num_points_factor=5, smoothing_factor=0.1):
     """
-    Smooths the contours using polygon approximation.
+    Smooths the contours using B-spline interpolation.
     """
     try:
         smoothed_contours = []
         for contour in contours:
-            smoothed = cv2.approxPolyDP(contour, epsilon, True)
-            if len(smoothed) > 8:  # Keep circular contours less simplified
-                smoothed_contours.append(smoothed)
-            else:
-                smoothed_contours.append(contour)
-        logger.info("Smoothed contours")
+            contour = np.squeeze(contour)
+            if contour.ndim != 2 or contour.shape[1] != 2:
+                logger.error("Contour shape is not valid for B-spline smoothing")
+                continue
+
+            x = contour[:, 0]
+            y = contour[:, 1]
+
+            t = np.linspace(0, 1, len(x))
+            # Adjust the smoothing factor `s` to control the smoothness
+            tck, u = si.splprep([x, y], s=smoothing_factor * len(x))
+            
+            # Set num_points based on the original contour length
+            num_points = max(len(x) * num_points_factor, 100)
+            u_fine = np.linspace(0, 1, num_points)
+            x_fine, y_fine = si.splev(u_fine, tck)
+
+            smoothed_contour = np.array([[int(x), int(y)] for x, y in zip(x_fine, y_fine)])
+            smoothed_contours.append(smoothed_contour)
+
+        logger.info("Smoothed contours with B-spline")
         return smoothed_contours
     except Exception as e:
-        logger.error(f"Error smoothing contours: {str(e)}")
+        logger.error(f"Error smoothing contours with B-spline: {str(e)}")
         raise
 
 def image_to_svg_path(image, mask):
@@ -93,13 +110,13 @@ def image_to_svg_path(image, mask):
     """
     try:
         contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        smoothed_contours = smooth_contours(contours, epsilon=2)
+        smoothed_contours = smooth_contours_with_bspline(contours)
 
         # Adjust path coordinates to account for the image growth
         path_data = []
-        for contour in contours:
-            contour_path = 'M ' + ' '.join([f"{point[0][0]},{point[0][1]}" for point in contour])
-            path_data.append(contour_path)
+        for contour in smoothed_contours:
+            contour_path = 'M ' + ' '.join([f"{point[0]},{point[1]}" for point in contour])
+            path_data.append(contour_path + ' Z')  # Ensure the path is closed
 
         full_path = ' '.join(path_data)
         logger.info("Generated SVG path data")

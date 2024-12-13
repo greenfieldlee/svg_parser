@@ -28,7 +28,14 @@ def convert_image_to_red_and_svg_with_border(image_path, output_svg_path):
 
     # Step 8: Convert contours to SVG paths for the red-filled content
     for contour in contours:
-        path_data = 'M ' + ' '.join([f"{point[0][0]},{point[0][1]}" for point in contour])
+        # Ensure the contour is closed by adding the first point at the end
+        contour = contour.reshape(-1, 2)
+        closed_contour = np.vstack([contour, contour[0]])
+
+        # Build the SVG path data with "M" for the first point and "L" for the rest
+        path_data = 'M ' + ' '.join([f"{point[0]},{point[1]}" for point in closed_contour])
+
+        # Create the SVG path for the contour
         path = dwg.path(d=path_data, fill='red', stroke='none', stroke_width=1)
         dwg.add(path)
 
@@ -36,8 +43,12 @@ def convert_image_to_red_and_svg_with_border(image_path, output_svg_path):
     # If there are multiple contours, choose the one with the largest area (outermost boundary)
     outer_contour = max(contours, key=cv2.contourArea)
 
-    # Step 10: Convert the outermost contour to an SVG path
-    border_path_data = 'M ' + ' '.join([f"{point[0][0]},{point[0][1]}" for point in outer_contour])
+    # Step 10: Ensure the outer contour is closed
+    outer_contour = outer_contour.reshape(-1, 2)
+    closed_outer_contour = np.vstack([outer_contour, outer_contour[0]])
+
+    # Convert the outermost contour to an SVG path
+    border_path_data = 'M ' + ' '.join([f"{point[0]},{point[1]}" for point in closed_outer_contour])
     border_path = dwg.path(d=border_path_data, fill='none', stroke='black', stroke_width=2)  # Black border
     dwg.add(border_path)
 
