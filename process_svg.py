@@ -37,8 +37,8 @@ def resize_image(image, grow):
         original_height, original_width = image.shape[:2]
         scale_factor = calculate_scale_factor(original_width, original_height, grow)
         
-        new_width = int(original_width * scale_factor[0])
-        new_height = int(original_height * scale_factor[1])
+        new_width = int(original_width * scale_factor[1])
+        new_height = int(original_height * scale_factor[2])
         
         resized_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
         logger.info(f"Resized image to {new_width}x{new_height} (scale factor: {scale_factor})")
