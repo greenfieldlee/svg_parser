@@ -14,14 +14,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Setup CORS middleware
+origins = [
+    "http://localhost:3000",
+    "https://sticker.getonnet.dev"
+    # Add more allowed origins as needed
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Allows all origins
+    allow_origins=origins,
     # allow_credentials=True,
-    # allow_methods=["*"],  # Allows all methods
-    # allow_headers=["*"],  # Allows all headers
+    # allow_methods=["*"],
+    # allow_headers=["*"],
 )
-
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
