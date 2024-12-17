@@ -53,7 +53,7 @@ def convert_svg_to_png(svg_file_path, output_png_path):
         raise
 
 
-def add_smooth_grow_outline(input_path, output_path, border_color=(255, 0, 0, 255), grow_pixels=10, blur_radius=0.5):
+def add_smooth_grow_outline(input_path, output_path, border_color=(255, 0, 0, 255), grow_pixels=10, blur_radius=1):
     # Load the original image
     original = Image.open(input_path).convert("RGBA")
 
