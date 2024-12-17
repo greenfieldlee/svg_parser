@@ -195,7 +195,7 @@ async def process_svg_endpoint(file: UploadFile = File(...), grow: float = Form(
             input_path=temp_intermediate_png,
             output_path=temp_outlined_png,
             border_color=(255, 0, 0, 255),
-            grow_pixels=int(grow / 5),
+            grow_pixels=int(grow / 8),
             blur_radius=1
         )
 
